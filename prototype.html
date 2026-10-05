@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tutor Prototype (A/B/C) - Growth Design Style</title>
+    <!-- Tích hợp Tailwind CSS CDN theo guideline -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Sử dụng Font chữ Plus Jakarta Sans mang hơi hướng hiện đại, thân thiện -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        gdDark: '#0B0F19',
+                        gdCard: '#1E293B',
+                        gdPrimary: '#6366F1', // Indigo - Growth Design Accent
+                        gdAccent: '#10B981', // Emerald
+                        gdDanger: '#F43F5E', // Rose
+                        gdWarning: '#F59E0B' // Amber
+                    },
+                    boxShadow: {
+                        'solid': '4px 4px 0px 0px rgba(15, 23, 42, 1)',
+                        'solid-hover': '2px 2px 0px 0px rgba(15, 23, 42, 1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F8FAFC;
+            color: #0F172A;
+        }
+
+        /* Playful Brutalism Buttons (Đặc trưng của Growth.Design) */
+        .btn-playful {
+            transition: all 0.2s ease;
+            border: 2px solid #0F172A;
+            box-shadow: 4px 4px 0px 0px #0F172A;
+        }
+
+        .btn-playful:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px 0px #0F172A;
+        }
+
+        .btn-playful:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px 0px #0F172A;
+        }
+
+        /* Map Node - Clean & Pop */
+        .map-node {
+            background-color: white;
+            border: 3px solid #0F172A;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 4px 4px 0px 0px #0F172A;
+        }
+
+        .map-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 4px 6px 0px 0px #0F172A;
+        }
+
+        /* Blink Animation for Option B (Hạn chế Layout Shift - CLS) */
+        @keyframes pulse-ring {
+            0% {
+                box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.7), 4px 4px 0px 0px #0F172A;
+            }
+
+            70% {
+                box-shadow: 0 0 0 15px rgba(244, 63, 94, 0), 4px 4px 0px 0px #0F172A;
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(244, 63, 94, 0), 4px 4px 0px 0px #0F172A;
+            }
+        }
+
+        .ai-target {
+            border-color: #F43F5E;
+            animation: pulse-ring 2s infinite;
+        }
+
+        /* Speech Bubble (Comic Style UI) */
+        .speech-bubble {
+            position: relative;
+            background: #fff;
+            border: 3px solid #0F172A;
+            border-radius: 16px;
+            box-shadow: 4px 4px 0px 0px #0F172A;
+        }
+
+        .speech-bubble:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border: 15px solid transparent;
+            border-top-color: #0F172A;
+            border-bottom: 0;
+            border-left: 0;
+            margin-left: -7.5px;
+            margin-bottom: -15px;
+        }
+
+        .speech-bubble-inner:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 20px;
+            width: 0;
+            height: 0;
+            border: 11px solid transparent;
+            border-top-color: #fff;
+            border-bottom: 0;
+            border-left: 0;
+            margin-left: -5.5px;
+            margin-bottom: -11px;
+            z-index: 1;
+        }
+
+        /* Modals Background */
+        .modal-overlay {
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="antialiased min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Navigator (Reset Bar) -->
+    <div
+        class="w-full max-w-5xl bg-white border-3 border-slate-900 rounded-2xl p-4 mb-8 shadow-solid flex flex-wrap gap-4 items-center justify-between z-10 relative border-2 border-black">
+        <div class="flex gap-3">
+            <button id="btn-opt-a" onclick="switchOption('A')"
+                class="btn-playful bg-gdPrimary text-white font-bold py-2 px-4 rounded-lg">Phương án A</button>
+            <button id="btn-opt-b" onclick="switchOption('B')"
+                class="btn-playful bg-white text-slate-800 font-bold py-2 px-4 rounded-lg">Phương án B</button>
+            <button id="btn-opt-c" onclick="switchOption('C')"
+                class="btn-playful bg-white text-slate-800 font-bold py-2 px-4 rounded-lg">Phương án C</button>
+        </div>
+        <div class="text-slate-500 font-semibold text-sm bg-slate-100 py-1 px-3 rounded-full border border-slate-200">
+            💡 Click to switch / reset state
+        </div>
+    </div>
+
+    <!-- Main Workspace -->
+    <div class="w-full max-w-5xl flex gap-8 items-start">
+
+        <!-- Video Context (Common 70%) -->
+        <div class="flex-grow bg-white border-2 border-slate-900 rounded-2xl p-6 shadow-solid">
+            <div class="flex items-center gap-3 mb-6">
+                <div
+                    class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-xl border-2 border-indigo-200">
+                    🎓</div>
+                <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Bài 5: Cấu trúc dữ liệu</h2>
+            </div>
+
+            <div
+                class="w-full aspect-video bg-slate-900 rounded-xl flex flex-col items-center justify-center text-white relative overflow-hidden border-4 border-slate-800 shadow-inner">
+                <div class="text-6xl mb-4 hover:scale-110 transition-transform cursor-pointer">▶️</div>
+                <p class="text-xl font-semibold opacity-80">Video bài giảng đang phát...</p>
+                <!-- Playful progress bar -->
+                <div class="absolute bottom-0 left-0 h-3 bg-slate-700 w-full">
+                    <div class="h-full bg-gdPrimary w-1/3 rounded-r-full"></div>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center h-20 items-center">
+                <button id="main-help-btn" onclick="triggerHelp()"
+                    class="btn-playful bg-gdDanger text-white text-lg font-bold py-4 px-8 rounded-xl flex items-center gap-3">
+                    <span class="text-2xl">🤯</span> Tôi không hiểu đoạn này!
+                </button>
+                <div id="opt-b-instruction"
+                    class="hidden text-slate-500 font-semibold flex items-center gap-2 bg-slate-100 py-2 px-4 rounded-lg border border-slate-200 animate-fade-in">
+                    <span class="animate-pulse text-xl">⏸️</span> Video đang tạm dừng để bạn suy ngẫm...
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar (Option B) -->
+        <div id="sidebar-map" class="hidden w-80 flex-shrink-0 animate-fade-in">
+            <div class="bg-white border-2 border-slate-900 rounded-2xl p-6 shadow-solid flex flex-col items-center">
+                <h3 class="text-xl font-extrabold text-slate-800 mb-6 text-center">Prerequisite Map</h3>
+
+                <div class="flex flex-col items-center gap-4 w-full relative">
+                    <div class="map-node w-full" onclick="showExplainer('Biến số')">1. Biến số</div>
+                    <div class="text-slate-400 font-black text-xl">▼</div>
+                    <div id="opt-b-node" class="map-node w-full" onclick="showExplainer('Kiểu dữ liệu')">2. Kiểu dữ liệu
+                    </div>
+                    <div class="text-slate-400 font-black text-xl">▼</div>
+                    <div class="map-node w-full" onclick="showExplainer('Vòng lặp')">3. Vòng lặp</div>
+
+                    <!-- AI Suggestion Bubble -->
+                    <div id="ai-suggestion-box"
+                        class="hidden absolute top-1/2 left-0 -translate-x-full ml-2 -mt-10 z-20 w-64 animate-fade-in">
+                        <div class="speech-bubble speech-bubble-inner p-4">
+                            <p class="font-bold text-slate-800 text-sm mb-3">🤖 Có vẻ bạn kẹt ở <span
+                                    class="text-gdDanger bg-pink-50 px-1 rounded">Kiểu dữ liệu</span> phải không?</p>
+                            <div class="flex flex-col gap-2">
+                                <button onclick="showExplainer('Kiểu dữ liệu')"
+                                    class="btn-playful bg-gdAccent text-white font-bold py-2 px-2 rounded-lg text-sm text-center">Đúng,
+                                    giải thích đi!</button>
+                                <button onclick="dismissSuggestion()"
+                                    class="btn-playful bg-slate-100 text-slate-600 font-bold py-1 px-2 rounded-lg text-xs text-center border-slate-300">Không
+                                    phải, bỏ qua</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Definition Box -->
+                <div id="sidebar-explainer"
+                    class="hidden mt-8 bg-indigo-50 border-2 border-indigo-200 rounded-xl p-4 w-full animate-fade-in">
+                    <p class="text-sm font-semibold text-indigo-900 leading-relaxed" id="sidebar-explainer-text"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Overlay -->
+    <div id="modal" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+
+        <!-- Modal Content A -->
+        <div id="modal-content-A"
+            class="hidden bg-white border-4 border-slate-900 rounded-2xl shadow-solid max-w-3xl w-full overflow-hidden transform transition-all scale-100">
+            <div class="bg-indigo-50 px-6 py-5 border-b-2 border-slate-200 flex justify-between items-center">
+                <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">🧭 Sơ đồ kiến thức</h3>
+                <button onclick="closeModal()"
+                    class="text-slate-400 hover:text-slate-800 font-bold text-3xl leading-none">&times;</button>
+            </div>
+            <div
+                class="p-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CjxjaXJjbGUgY3g9IjIiIGN5PSIyIiByPSIyIiBmaWxsPSIjZjFmNWY5Ii8+Cjwvc3ZnPg==')]">
+                <p
+                    class="text-slate-600 font-bold mb-8 text-center text-lg bg-white inline-block px-4 py-2 rounded-full border-2 border-slate-100 shadow-sm mx-auto flex w-max">
+                    🤔 Bạn nghĩ mình đang bị hổng ở khái niệm nào dưới đây?</p>
+
+                <div class="flex items-center justify-center gap-6 mt-4">
+                    <div class="map-node" onclick="showModalExplainer('Biến số')">Biến số</div>
+                    <div class="text-slate-300 font-black text-3xl">▶</div>
+                    <div class="map-node" onclick="showModalExplainer('Kiểu dữ liệu')">Kiểu dữ liệu</div>
+                    <div class="text-slate-300 font-black text-3xl">▶</div>
+                    <div class="map-node" onclick="showModalExplainer('Vòng lặp')">Vòng lặp</div>
+                </div>
+
+                <div id="modal-explainer-A"
+                    class="hidden mt-10 bg-green-50 border-2 border-green-200 rounded-xl p-6 text-center animate-fade-in shadow-sm">
+                    <p class="font-bold text-green-900 text-lg" id="modal-explainer-A-text"></p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-5 border-t-2 border-slate-200 flex justify-end">
+                <button onclick="closeModal()"
+                    class="btn-playful bg-slate-800 text-white font-bold py-3 px-8 rounded-xl text-lg">Quay lại
+                    video</button>
+            </div>
+        </div>
+
+        <!-- Modal Content C -->
+        <div id="modal-content-C"
+            class="hidden bg-white border-4 border-slate-900 rounded-2xl shadow-solid max-w-lg w-full overflow-hidden">
+            <div class="bg-yellow-50 px-6 py-5 border-b-2 border-slate-200">
+                <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">🩺 AI Chẩn đoán nhanh</h3>
+            </div>
+
+            <div class="p-8 bg-slate-50" id="quiz-step">
+                <p class="text-slate-600 font-bold mb-6 text-lg text-center">Trả lời 2 câu hỏi cực nhanh để AI bắt đúng
+                    bệnh nhé!</p>
+
+                <div class="bg-white border-2 border-slate-200 rounded-xl p-5 mb-4 shadow-sm relative">
+                    <div
+                        class="absolute -top-3 -left-3 bg-indigo-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 border-slate-900">
+                        1</div>
+                    <p class="font-bold text-slate-800 mb-4 mt-2">Bạn có biết hàm <code
+                            class="bg-pink-50 text-pink-500 px-2 py-1 rounded border border-pink-100">int()</code> dùng
+                        làm gì không?</p>
+                    <div class="flex gap-3">
+                        <button onclick="nextQuiz()"
+                            class="btn-playful flex-1 bg-white text-slate-700 font-bold py-3 rounded-lg hover:bg-slate-100">Có
+                            biết</button>
+                        <button onclick="nextQuiz()"
+                            class="btn-playful flex-1 bg-white text-slate-700 font-bold py-3 rounded-lg hover:bg-slate-100">Chưa
+                            rõ lắm</button>
+                    </div>
+                </div>
+
+                <div id="quiz-q2"
+                    class="hidden bg-white border-2 border-slate-200 rounded-xl p-5 shadow-sm animate-fade-in relative mt-6">
+                    <div
+                        class="absolute -top-3 -left-3 bg-indigo-500 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 border-slate-900">
+                        2</div>
+                    <p class="font-bold text-slate-800 mb-4 mt-2">Bạn phân biệt được String và Integer chưa?</p>
+                    <div class="flex gap-3">
+                        <button onclick="finishQuiz()"
+                            class="btn-playful flex-1 bg-white text-slate-700 font-bold py-3 rounded-lg hover:bg-slate-100">Rồi</button>
+                        <button onclick="finishQuiz()"
+                            class="btn-playful flex-1 bg-white text-slate-700 font-bold py-3 rounded-lg hover:bg-slate-100">Chưa</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-8 hidden text-center bg-slate-50" id="result-step">
+                <div class="text-6xl mb-4 animate-bounce">🚨</div>
+                <h3 class="text-3xl font-black text-gdDanger mb-2">Bắt đúng bệnh!</h3>
+                <p class="text-slate-600 font-medium mb-8 text-lg">Bạn đang hổng kiến thức cốt lõi phần <span
+                        class="font-bold text-slate-900 bg-pink-100 px-3 py-1 rounded-lg border border-pink-200">Kiểu dữ
+                        liệu</span>.</p>
+
+                <div class="bg-white border-2 border-slate-200 rounded-xl p-6 text-left mb-8 shadow-sm">
+                    <h4 class="font-bold text-slate-800 mb-2 flex items-center gap-2"><span class="text-xl">💡</span>
+                        Kiểu dữ liệu là gì?</h4>
+                    <p class="text-slate-600 font-medium">Là cách máy tính phân loại dữ liệu (như số, chữ). Việc không
+                        hiểu kiểu dữ liệu khiến bạn không hiểu bài hiện tại. Hãy ôn lại nó nhé!</p>
+                </div>
+
+                <div class="flex flex-col gap-3">
+                    <button onclick="closeModal()"
+                        class="btn-playful w-full bg-slate-900 text-white font-bold py-4 px-6 rounded-xl text-lg">Đã hiểu,
+                        quay lại học tiếp</button>
+                    <button onclick="overrideDiagnosis()"
+                        class="text-xs text-slate-500 hover:text-slate-800 underline font-medium">
+                        AI chẩn đoán chưa đúng? Tự chọn phần cần xem lại
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentOption = 'A';
+        let bTimeout;
+
+        function switchOption(opt) {
+            currentOption = opt;
+
+            // Tối ưu UX: Chuyển đổi trạng thái nút
+            document.querySelectorAll('button[id^="btn-opt-"]').forEach(b => {
+                b.classList.remove('bg-gdPrimary', 'text-white');
+                b.classList.add('bg-white', 'text-slate-800');
+            });
+            const activeBtn = document.getElementById('btn-opt-' + opt.toLowerCase());
+            activeBtn.classList.remove('bg-white', 'text-slate-800');
+            activeBtn.classList.add('bg-gdPrimary', 'text-white');
+
+            // Reset visibility (Tránh Layout Shift)
+            document.getElementById('sidebar-map').classList.add('hidden');
+            document.getElementById('main-help-btn').classList.remove('hidden');
+            document.getElementById('opt-b-instruction').classList.add('hidden');
+            document.getElementById('opt-b-instruction').classList.remove('flex');
+            document.getElementById('ai-suggestion-box').classList.add('hidden');
+            document.getElementById('opt-b-node').classList.remove('ai-target');
+            document.getElementById('sidebar-explainer').classList.add('hidden');
+            closeModal();
+            clearTimeout(bTimeout);
+
+            if (opt === 'B') {
+                document.getElementById('sidebar-map').classList.remove('hidden');
+                document.getElementById('main-help-btn').classList.add('hidden');
+                document.getElementById('opt-b-instruction').classList.remove('hidden');
+                document.getElementById('opt-b-instruction').classList.add('flex');
+
+                bTimeout = setTimeout(() => {
+                    document.getElementById('opt-b-node').classList.add('ai-target');
+                    document.getElementById('ai-suggestion-box').classList.remove('hidden');
+                }, 3000);
+            }
+        }
+
+        function triggerHelp() {
+            const modal = document.getElementById('modal');
+            modal.classList.remove('hidden');
+
+            document.getElementById('modal-content-A').classList.add('hidden');
+            document.getElementById('modal-content-C').classList.add('hidden');
+
+            if (currentOption === 'A') {
+                document.getElementById('modal-content-A').classList.remove('hidden');
+                document.getElementById('modal-explainer-A').classList.add('hidden');
+            } else if (currentOption === 'C') {
+                document.getElementById('modal-content-C').classList.remove('hidden');
+                document.getElementById('quiz-step').classList.remove('hidden');
+                document.getElementById('result-step').classList.add('hidden');
+                document.getElementById('quiz-q2').classList.add('hidden');
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        function showExplainer(topic) {
+            const el = document.getElementById('sidebar-explainer');
+            const textEl = document.getElementById('sidebar-explainer-text');
+            textEl.innerHTML = `👋 <b>${topic}</b> là kiến thức nền tảng quan trọng giúp bạn tiếp thu bài học hôm nay.`;
+            el.classList.remove('hidden');
+            dismissSuggestion();
+        }
+
+        function showModalExplainer(topic) {
+            const el = document.getElementById('modal-explainer-A');
+            const textEl = document.getElementById('modal-explainer-A-text');
+            textEl.innerHTML = `✨ Bạn đang xem thẻ <b>${topic}</b>. Hãy đọc qua khái niệm này rồi quay lại nhé.`;
+            el.classList.remove('hidden');
+        }
+
+        function dismissSuggestion() {
+            document.getElementById('opt-b-node').classList.remove('ai-target');
+            document.getElementById('ai-suggestion-box').classList.add('hidden');
+        }
+
+        // Option C logic (Micro-interactions)
+        function nextQuiz() {
+            document.getElementById('quiz-q2').classList.remove('hidden');
+        }
+        function finishQuiz() {
+            document.getElementById('quiz-step').classList.add('hidden');
+            document.getElementById('result-step').classList.remove('hidden');
+        }
+
+        function overrideDiagnosis() {
+            // Chuyển sang giao diện người dùng tự chọn chủ đề (Human Control / Fallback)
+            document.getElementById('modal-content-C').classList.add('hidden');
+            document.getElementById('modal-content-A').classList.remove('hidden');
+            document.getElementById('modal-explainer-A').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>
